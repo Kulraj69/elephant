@@ -1066,6 +1066,30 @@ class RAUCTestCase(unittest.TestCase):
         self.assertRaises(
             ValueError, elephant.signal_processing.rauc, **kwds)
 
+    def test_rauc_per_channel_quantity_baseline(self):
+        """
+        Intent: Subtract a quantity baseline before rectification.
+        Condition: Multiple channels, equivalent baseline units and time bins.
+        Expected: Same integral as independently subtracting each channel.
+        """
+        values = np.arange(24, dtype=float).reshape(8, 3) - 8
+        signal = neo.AnalogSignal(
+            values, units=pq.mV, sampling_rate=4 * pq.Hz,
+            t_start=2 * pq.s)
+        for units in (pq.mV, pq.uV):
+            baseline = (np.array([1., -2., 3.]) * pq.mV).rescale(units)
+            original_baseline = baseline.copy()
+            for duration in (None, 1 * pq.s):
+                with self.subTest(units=units, duration=duration):
+                    result = elephant.signal_processing.rauc(
+                        signal, baseline=baseline, bin_duration=duration)
+                    expected = elephant.signal_processing.rauc(
+                        signal - baseline, bin_duration=duration)
+                    assert_array_equal(result, expected)
+                    self.assertEqual(result.units, expected.units)
+                    assert_array_equal(signal.magnitude, values)
+                    assert_array_equal(baseline, original_baseline)
+
     def test_rauc_invalid_baseline(self):
         """Test rauc on bad baseline"""
         kwds = {'signal': self.test_signal1, 'baseline': 'bad'}
