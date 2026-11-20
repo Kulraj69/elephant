@@ -816,7 +816,7 @@ def hilbert(signal, padding='nextpow'):
         #
         # For this reason, nextpow is the default setting for now.
 
-        n = 2 ** (int(np.log2(n_org - 1)) + 1)
+        n = 1 if n_org == 1 else 2 ** (int(np.log2(n_org - 1)) + 1)
     elif padding == 'none' or padding is None:
         # No padding
         n = n_org
