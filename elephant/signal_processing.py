@@ -915,15 +915,15 @@ def rauc(signal, baseline=None, bin_duration=None, t_start=None, t_stop=None):
 
     if baseline is None:
         pass
+    elif isinstance(baseline, pq.Quantity):
+        # Subtract quantity arrays before comparing string baseline modes.
+        signal = signal - baseline
     elif baseline == 'mean':
         # subtract mean from each channel
         signal = signal - signal.mean(axis=0)
     elif baseline == 'median':
         # subtract median from each channel
         signal = signal - np.median(signal.as_quantity(), axis=0)
-    elif isinstance(baseline, pq.Quantity):
-        # subtract arbitrary baseline
-        signal = signal - baseline
     else:
         raise ValueError("baseline must be either None, 'mean', 'median', or "
                          "a Quantity. Got {}".format(baseline))
