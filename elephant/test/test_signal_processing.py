@@ -646,6 +646,31 @@ class HilbertTestCase(unittest.TestCase):
             sigs.T, units=pq.mV,
             sampling_rate=len(phases) * pq.Hz)
 
+    def test_hilbert_single_sample(self):
+        """
+        Intent: Transform a single sample with the default padding policy.
+        Condition: One or several channels, including zero and negative data.
+        Expected: Same complex real values as no padding, metadata retained.
+        """
+        for values in ([[2.0]], [[0.0, -3.0, 4.0]]):
+            with self.subTest(values=values):
+                signal = neo.AnalogSignal(
+                    values, units=pq.mV, sampling_rate=1000 * pq.Hz,
+                    t_start=5 * pq.ms,
+                    array_annotations={'channel': np.arange(len(values[0]))})
+                with np.errstate(divide='raise', invalid='raise'):
+                    result = elephant.signal_processing.hilbert(signal)
+                expected = elephant.signal_processing.hilbert(
+                    signal, padding=None)
+                assert_array_equal(result.magnitude, expected.magnitude)
+                self.assertEqual(result.shape, signal.shape)
+                self.assertEqual(result.units, pq.dimensionless)
+                self.assertEqual(result.t_start, signal.t_start)
+                self.assertEqual(result.sampling_rate, signal.sampling_rate)
+                assert_array_equal(result.array_annotations['channel'],
+                                   signal.array_annotations['channel'])
+                assert_array_equal(signal.magnitude, values)
+
     def test_hilbert_pad_type_error(self):
         """
         Tests if incorrect pad_type raises ValueError.
