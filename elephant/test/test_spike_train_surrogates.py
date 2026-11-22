@@ -16,6 +16,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_less
 import quantities as pq
 import neo
+from neo.core.spiketrainlist import SpikeTrainList
 
 
 class SurrogatesTestCase(unittest.TestCase):
@@ -176,7 +177,7 @@ class SurrogatesTestCase(unittest.TestCase):
         surrogate_trains = surr.randomise_spikes(
             self.st1, n_surrogates=n_surrogates)
 
-        self.assertIsInstance(surrogate_trains, list)
+        self.assertIsInstance(surrogate_trains, SpikeTrainList)
         self.assertEqual(len(surrogate_trains), n_surrogates)
 
         self.assertIsInstance(surrogate_trains[0], neo.SpikeTrain)
@@ -185,6 +186,27 @@ class SurrogatesTestCase(unittest.TestCase):
             self.assertEqual(surrogate_train.t_start, self.st1.t_start)
             self.assertEqual(surrogate_train.t_stop, self.st1.t_stop)
             self.assertEqual(len(surrogate_train), len(self.st1))
+
+    def test_spiketrainlist_output_preserves_spiketrain_attributes(self):
+        st = neo.SpikeTrain([90, 150, 180, 350] * pq.ms, t_start=10 * pq.ms,
+                            t_stop=500 * pq.ms, sampling_rate=10 * pq.kHz)
+        n_surrogates = 3
+        for method, dt in (('randomise_spikes', None),
+                           ('dither_spike_train', 10 * pq.ms),
+                           ('jitter_spikes', 100 * pq.ms)):
+            with self.subTest(method):
+                surrogate_trains = surr.surrogates(
+                    st, n_surrogates=n_surrogates, method=method, dt=dt)
+                self.assertIsInstance(surrogate_trains, SpikeTrainList)
+                self.assertEqual(len(surrogate_trains), n_surrogates)
+                self.assertIsInstance(surrogate_trains[1:], SpikeTrainList)
+                for surrogate_train in surrogate_trains:
+                    self.assertIsInstance(surrogate_train, neo.SpikeTrain)
+                    self.assertEqual(surrogate_train.units, st.units)
+                    self.assertEqual(surrogate_train.t_start, st.t_start)
+                    self.assertEqual(surrogate_train.t_stop, st.t_stop)
+                    self.assertEqual(surrogate_train.sampling_rate,
+                                     st.sampling_rate)
 
     def test_randomise_spikes_empty_train(self):
 
@@ -280,7 +302,7 @@ class SurrogatesTestCase(unittest.TestCase):
         surrogate_trains = surr.dither_spike_train(
             self.st1, shift=shift, n_surrogates=n_surrogates)
 
-        self.assertIsInstance(surrogate_trains, list)
+        self.assertIsInstance(surrogate_trains, SpikeTrainList)
         self.assertEqual(len(surrogate_trains), n_surrogates)
 
         self.assertIsInstance(surrogate_trains[0], neo.SpikeTrain)
@@ -328,7 +350,7 @@ class SurrogatesTestCase(unittest.TestCase):
         surrogate_trains = surr.jitter_spikes(
             self.st1, bin_size=bin_size, n_surrogates=n_surrogates)
 
-        self.assertIsInstance(surrogate_trains, list)
+        self.assertIsInstance(surrogate_trains, SpikeTrainList)
         self.assertEqual(len(surrogate_trains), n_surrogates)
 
         self.assertIsInstance(surrogate_trains[0], neo.SpikeTrain)

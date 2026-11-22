@@ -40,6 +40,7 @@ import copy
 from typing import Union, Optional, List
 
 import neo
+from neo.core.spiketrainlist import SpikeTrainList
 import numpy as np
 import quantities as pq
 from scipy.ndimage import gaussian_filter
@@ -278,7 +279,7 @@ def randomise_spikes(spiketrain, n_surrogates=1, decimals=None):
 
     Returns
     -------
-    list of neo.SpikeTrain
+    neo.core.spiketrainlist.SpikeTrainList
         Each surrogate spike train obtained independently from `spiketrain` by
         randomly distributing its spikes in the interval
         `[spiketrain.t_start, spiketrain.t_stop]`.
@@ -310,11 +311,12 @@ def randomise_spikes(spiketrain, n_surrogates=1, decimals=None):
     if decimals is not None:
         sts = sts.round(decimals)
 
-    # Convert the Quantity array to a list of SpikeTrains, and return them
-    return [neo.SpikeTrain(np.sort(st), t_start=spiketrain.t_start,
-                           t_stop=spiketrain.t_stop,
-                           sampling_rate=spiketrain.sampling_rate)
-            for st in sts]
+    # Convert the Quantity array to a SpikeTrainList, and return it
+    return SpikeTrainList(items=[
+        neo.SpikeTrain(np.sort(st), t_start=spiketrain.t_start,
+                       t_stop=spiketrain.t_stop,
+                       sampling_rate=spiketrain.sampling_rate)
+        for st in sts])
 
 
 @deprecated_alias(n='n_surrogates')
@@ -428,7 +430,7 @@ def dither_spike_train(spiketrain, shift, n_surrogates=1, decimals=None,
 
     Returns
     -------
-    list of :class:`neo.core.SpikeTrain`
+    :class:`neo.core.spiketrainlist.SpikeTrainList`
         Each surrogate spike train obtained independently of `spiketrain` by
         randomly dithering the whole spike train. The time range of the
         surrogate spike trains is the same as in `spiketrain`.
@@ -478,11 +480,12 @@ def dither_spike_train(spiketrain, shift, n_surrogates=1, decimals=None,
                 for s in surr.simplified.magnitude]
 
     # Return the surrogates as SpikeTrains
-    return [neo.SpikeTrain(s, t_start=spiketrain.t_start,
-                           t_stop=spiketrain.t_stop,
-                           sampling_rate=spiketrain.sampling_rate
-                           ).rescale(spiketrain.units)
-            for s in surr]
+    return SpikeTrainList(items=[
+        neo.SpikeTrain(s, t_start=spiketrain.t_start,
+                       t_stop=spiketrain.t_stop,
+                       sampling_rate=spiketrain.sampling_rate
+                       ).rescale(spiketrain.units)
+        for s in surr])
 
 
 @deprecated_alias(binsize='bin_size', n='n_surrogates')
@@ -512,7 +515,7 @@ def jitter_spikes(spiketrain, bin_size, n_surrogates=1):
 
     Returns
     -------
-    list of neo.SpikeTrain
+    neo.core.spiketrainlist.SpikeTrainList
         Each surrogate spike train obtained independently from `spiketrain` by
         randomly replacing its spikes within bins of user-defined width. The
         time range of the surrogate spike trains is the same as in
@@ -569,11 +572,12 @@ def jitter_spikes(spiketrain, bin_size, n_surrogates=1):
     # poisson 0-1 spike trains to dilat * s + offset. Attach time unit again
     surr = np.sort(surr_poiss01 * dilats + offsets, axis=1) * std_unit
 
-    return [neo.SpikeTrain(s, t_start=spiketrain.t_start,
-                           t_stop=spiketrain.t_stop,
-                           sampling_rate=spiketrain.sampling_rate
-                           ).rescale(spiketrain.units)
-            for s in surr]
+    return SpikeTrainList(items=[
+        neo.SpikeTrain(s, t_start=spiketrain.t_start,
+                       t_stop=spiketrain.t_stop,
+                       sampling_rate=spiketrain.sampling_rate
+                       ).rescale(spiketrain.units)
+        for s in surr])
 
 
 def bin_shuffling(
@@ -1397,7 +1401,7 @@ def surrogates(spiketrain, n_surrogates=1, method='dither_spike_train',
 
     Returns
     -------
-    list of neo.SpikeTrain
+    list of neo.SpikeTrain or neo.core.spiketrainlist.SpikeTrainList
         Each surrogate spike train obtained independently from `spiketrain`
         according to chosen surrogate type. The time range of the surrogate
         spike trains is the same as in `spiketrain`.
